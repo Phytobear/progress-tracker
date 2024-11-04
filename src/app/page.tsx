@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -10,6 +11,7 @@ type Task = {
   progress: number;
   frequency: "daily" | "weekly";
   dueDate?: string;
+  editing?: boolean;
 };
 
 export default function HomePage() {
@@ -88,10 +90,37 @@ export default function HomePage() {
     );
   };
 
+  // Function to edit a task
+  const editTask = (id: number, updatedTask: Partial<Task>) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === id ? { ...task, ...updatedTask } : task
+      )
+    );
+  };
+
+  // Function to add a new task
+  const addNewTask = () => {
+    const newTask: Task = {
+      id: tasks.length + 1,
+      title: "New Task",
+      description: "Task description",
+      progress: 0,
+      frequency: "daily",
+    };
+    setTasks([...tasks, newTask]);
+  };
+
   return (
     <div className="container mx-auto p-4">
       <header className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Daily Progress Tracker</h1>
+        <button
+          onClick={addNewTask}
+          className="bg-blue-500 text-white px-4 py-2 rounded shadow-md hover:bg-blue-600"
+        >
+          Add New Task
+        </button>
       </header>
 
       {/* Tabs List for detailed information of each task - Fixed at the top */}
@@ -163,6 +192,39 @@ export default function HomePage() {
                 <span>{task.frequency} Task</span>
                 <span>{task.progress}%</span>
               </div>
+              <div className="flex items-center justify-end mt-4">
+                <button
+                  onClick={() => editTask(task.id, { editing: !task.editing })}
+                  className="bg-blue-500 text-white px-4 py-2 rounded shadow-md hover:bg-blue-600"
+                >
+                  {task.editing ? "Save" : "Edit Task"}
+                </button>
+              </div>
+              {task.editing && (
+                <>
+                  <div className="mb-4">
+                    <label className="block mb-1">Title:</label>
+                    <input
+                      type="text"
+                      value={task.title}
+                      onChange={(e) =>
+                        editTask(task.id, { title: e.target.value })
+                      }
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block mb-1">Description:</label>
+                    <textarea
+                      value={task.description}
+                      onChange={(e) =>
+                        editTask(task.id, { description: e.target.value })
+                      }
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                </>
+              )}
             </TabsContent>
           ))}
         </Tabs>
