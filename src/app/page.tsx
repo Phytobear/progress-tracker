@@ -58,11 +58,18 @@ export default function HomePage() {
         },
         body: JSON.stringify({ id, progress: Math.min(progress, 100) }),
       });
-      if (!response.ok) {
-        console.error("Error updating task progress:", response.statusText);
-      } else {
-        console.log("Task progress updated successfully");
+
+      if (response.status === 401) {
+        // Handle unauthorized - maybe redirect to login
+        window.location.href = "/signin";
+        return;
       }
+
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+
+      console.log("Task progress updated successfully");
     } catch (error) {
       console.error("Update task progress error:", error);
     }
@@ -119,15 +126,26 @@ export default function HomePage() {
       userId: user?.id, // Associate new task with current user
     };
     setTasks([...tasks, newTask]);
-    const response = await fetch(`/api/tasks/addTask`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(newTask),
-    });
-    if (!response.ok) {
-      console.error("Error adding new task:", response.statusText);
+    try {
+      const response = await fetch(`/api/tasks/addTask`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newTask),
+      });
+
+      if (response.status === 401) {
+        // Handle unauthorized - maybe redirect to login
+        window.location.href = "/signin";
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+    } catch (error) {
+      console.error("Error adding new task:", error);
     }
   };
 
