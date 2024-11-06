@@ -1,39 +1,21 @@
-import React from "react";
-import { Button } from "@/components/ui/Button";
-import { UserButton } from "@clerk/nextjs";
-import { Home, List, User } from "lucide-react";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import NavBar from "./NavBar";
+import Link from "next/link";
 
 export default function Header() {
   return (
-    <header className="w-full bg-white shadow-md p-4 flex justify-between items-center">
-      {/* App Title */}
-      <div className="text-2xl font-bold text-gray-800">Progress Tracker</div>
-
-      {/* Navigation Buttons */}
-      <div className="flex items-center space-x-8">
-        {/* Home Button */}
-        <button className="text-gray-700 hover:text-blue-500 flex items-center space-x-1">
-          <Home className="w-5 h-5" />
-          <span>Home</span>
-        </button>
-
-        {/* Tasks Button */}
-        <button className="text-gray-700 hover:text-blue-500 flex items-center space-x-1">
-          <List className="w-5 h-5" />
-          <span>Tasks</span>
-        </button>
-
-        {/* Profile Button */}
-        <button className="text-gray-700 hover:text-blue-500 flex items-center space-x-1">
-          <User className="w-5 h-5" />
-          <span>Profile</span>
-        </button>
-      </div>
-
-      {/* Header Actions */}
-      <div className="flex items-center space-x-4">
-        {/* User Button for Account Settings */}
-        <UserButton afterSignOutUrl="/" />
+    <header className="sticky top-0 flex h-8 bg-slate-400 items-center">
+      <h1 className="font-bold m-2 text-2xl">Progress-Tracker3000&trade;</h1>
+      <NavBar />
+      <div className="flex-1"></div>
+      <div className="flex gap-2 m-2">
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
+        <SignedOut>
+          <Link href="/sign-in/">Sign In</Link>
+          <Link href="/sign-up/">Sign Up</Link>
+        </SignedOut>
       </div>
     </header>
   );

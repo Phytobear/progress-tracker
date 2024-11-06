@@ -1,10 +1,10 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 
-export default clerkMiddleware({
-  publicRoutes: ["/", "/sign-in", "/sign-up"],
-});
+export default clerkMiddleware();
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/api/:path*"],
+  matcher: [
+    "/((?!.*\\..*|_next).*)", // all routes except Next.js internal and files
+    "/(api|trpc)(.*)",
+  ],
 };
-console.log("Middleware is being executed...");
