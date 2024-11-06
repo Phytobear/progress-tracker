@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import React, { useState, useEffect } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
+import { UserButton, useUser } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
 
 // Task type definition
 type Task = {
@@ -12,115 +14,143 @@ type Task = {
   frequency: "daily" | "weekly";
   dueDate?: string;
   editing?: boolean;
+  userId?: string;
 };
 
 export default function HomePage() {
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: 1,
-      title: "Obsidian Updates",
-      description: "Organise notes",
-      progress: 20,
-      frequency: "daily",
-    },
-    {
-      id: 2,
-      title: "Job Search",
-      description: "Apply for new roles",
-      progress: 50,
-      frequency: "weekly",
-    },
-    {
-      id: 3,
-      title: "Touch Typing Practice",
-      description: "Daily typing practice",
-      progress: 75,
-      frequency: "daily",
-    },
-    {
-      id: 4,
-      title: "Reading",
-      description: "Daily Pages",
-      progress: 75,
-      frequency: "daily",
-    },
-    {
-      id: 5,
-      title: "Learn a New Thing",
-      description: "What will it be today?",
-      progress: 75,
-      frequency: "daily",
-    },
-    {
-      id: 6,
-      title: "Personal Project",
-      description: "Have you pushed to github today?",
-      progress: 75,
-      frequency: "daily",
-    },
-    {
-      id: 7,
-      title: "Python Practice",
-      description: "Daily coding practice",
-      progress: 75,
-      frequency: "daily",
-    },
-    {
-      id: 8,
-      title: "JavaScript Practice",
-      description: "Daily coding practice",
-      progress: 75,
-      frequency: "daily",
-    },
-    {
-      id: 9,
-      title: "Chores",
-      description: "Have you washed the dishes?",
-      progress: 75,
-      frequency: "daily",
-    },
-  ]);
+  const { user, isLoaded } = useUser();
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  // Redirect if not authenticated
+  if (isLoaded && !user) {
+    redirect("/sign-in");
+  }
+
+  // Load tasks from the API
+  useEffect(() => {
+    const fetchTasks = async () => {
+      if (user) {
+        const response = await fetch(`/api/tasks?userId=${user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setTasks(data);
+        } else {
+          console.error("Error fetching tasks:", response.statusText);
+        }
+      }
+    };
+    fetchTasks();
+  }, [user]);
 
   // Function to update task progress
-  const updateTaskProgress = (id: number, progress: number) => {
+  const updateTaskProgress = async (id: number, progress: number) => {
+    console.log(`Updating task ${id} with progress: ${progress}`);
     setTasks((prevTasks) =>
       prevTasks.map((task) =>
         task.id === id ? { ...task, progress: Math.min(progress, 100) } : task
       )
     );
+    try {
+      const response = await fetch(`/api/tasks/updateProgress`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, progress: Math.min(progress, 100) }),
+      });
+      if (!response.ok) {
+        console.error("Error updating task progress:", response.statusText);
+      } else {
+        console.log("Task progress updated successfully");
+      }
+    } catch (error) {
+      console.error("Update task progress error:", error);
+    }
   };
 
-  // Function to edit a task
-  const editTask = (id: number, updatedTask: Partial<Task>) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === id ? { ...task, ...updatedTask } : task
-      )
-    );
+  // Function to edit task
+  const editTask = async (id: number, updatedTask: Partial<Task>) => {
+    try {
+      // Optimistic update
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === id ? { ...task, ...updatedTask } : task
+        )
+      );
+
+      const response = await fetch("/api/tasks", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, ...updatedTask }),
+      });
+
+      if (response.status === 401) {
+        // Handle unauthorized - maybe redirect to login
+        window.location.href = "/signin";
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(response.statusText);
+      }
+
+      const updatedTaskData = await response.json();
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === id ? { ...task, ...updatedTaskData } : task
+        )
+      );
+    } catch (error) {
+      console.error("Error editing task:", error);
+      // Revert optimistic update if needed
+    }
   };
 
   // Function to add a new task
-  const addNewTask = () => {
+  const addNewTask = async () => {
     const newTask: Task = {
       id: tasks.length + 1,
       title: "New Task",
       description: "Task description",
       progress: 0,
       frequency: "daily",
+      userId: user?.id, // Associate new task with current user
     };
     setTasks([...tasks, newTask]);
+    const response = await fetch(`/api/tasks/addTask`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newTask),
+    });
+    if (!response.ok) {
+      console.error("Error adding new task:", response.statusText);
+    }
   };
+
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="container mx-auto p-4">
-      <header className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Daily Progress Tracker</h1>
-        <button
-          onClick={addNewTask}
-          className="bg-blue-500 text-white px-4 py-2 rounded shadow-md hover:bg-blue-600"
-        >
-          Add New Task
-        </button>
+      <header className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">Daily Progress Tracker</h1>
+          <p className="text-gray-600">Welcome, {user?.firstName || "User"}!</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={addNewTask}
+            className="bg-blue-500 text-white px-4 py-2 rounded shadow-md hover:bg-blue-600"
+          >
+            Add New Task
+          </button>
+          <UserButton afterSignOutUrl="/" />
+        </div>
       </header>
 
       {/* Tabs List for detailed information of each task - Fixed at the top */}
